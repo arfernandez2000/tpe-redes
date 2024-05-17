@@ -1,0 +1,6 @@
+# pg_hba.conf
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+{% for item in postgresql_hba_entries %}
+{{ item.type }}    {{ item.database }}        {{ item.user }}            {{ item.address }}                 {{ item.method }}
+{% endfor %}

@@ -1,0 +1,15 @@
+---
+- name: Configure Webserver
+  hosts: ws
+  become: true
+  remote_user: azureuser
+  tasks:
+    - name: Install Docker CE
+      ansible.builtin.apt:
+        name: docker-ce
+        state: present
+
+    - name: Install Git
+      ansible.builtin.apt:
+        name: git
+        state: present

@@ -1,0 +1,17 @@
+# postgresql.conf
+
+# Adjust settings here to suit your installation.
+
+# Data Directory
+data_directory = '{{ postgresql_data_directory }}'
+
+# Connection Settings
+listen_addresses = '{{ postgresql_listen_addresses }}'
+port = 5432
+
+# Resource Usage Settings
+max_connections = {{ postgresql_max_connections }}
+shared_buffers = '{{ postgresql_shared_buffers }}'
+
+# Other configuration settings can be added here
+
