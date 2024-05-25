@@ -1,11 +1,11 @@
 const { Pool } = require("pg");
 
-const pool = new Pool({
+const db = new Pool({
   user: "myuser",
-  host: "172.203.163.152",
+  host: "10.0.0.4",
   database: "mydatabase",
   password: "mypassword",
-  port: 5433,
+  port: 5432,
 });
 
 async function addScore(name, score) {

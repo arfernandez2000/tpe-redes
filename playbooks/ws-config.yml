@@ -4,12 +4,53 @@
   become: true
   remote_user: azureuser
   tasks:
-    - name: Install Docker CE
+    - name: Install required system packages
       ansible.builtin.apt:
-        name: docker-ce
+        name: "{{ item }}"
         state: present
+      loop:
+        - nodejs
+        - npm
 
-    - name: Install Git
-      ansible.builtin.apt:
-        name: git
-        state: present
+    - name: Copy web server code into vm
+      ansible.builtin.copy:
+        src: ../web-server
+        dest: ./
+
+    - name: npm install
+      ansible.builtin.command:
+      become: true
+      args:
+        chdir: web-server/
+        cmd: npm install
+
+    - name: Copy systemd service file for Node.js app
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=My Node.js App
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/bin/npm start
+          WorkingDirectory=/home/azureuser/web-server/
+          Restart=always
+          User=root
+          Group=root
+          Environment=PATH=/usr/bin:/usr/local/bin
+          Environment=NODE_ENV=production
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/node-app.service
+        mode: '0644'
+
+    - name: Reload systemd to pick up new service file
+      ansible.builtin.command: systemctl daemon-reload
+
+    - name: Enable and start Node.js app service
+      ansible.builtin.systemd:
+        name: node-app
+        enabled: yes
+        state: stopped
+ 

@@ -1,6 +1,7 @@
 const express = require("express");
 const { addScore, getLeaderboard, createDatabase } = require("./repository");
 const app = express();
+app.use(express.json())
 
 app.get("/leaderboards", async (req, res) => {
   try {
@@ -13,10 +14,12 @@ app.get("/leaderboards", async (req, res) => {
 });
 
 app.post("/scores", async (req, res) => {
-  const { name, score } = req.body;
+  const name = req.body.name;
+  const score = req.body.score;
   try {
     await addScore(name, score);
-    res.status(201);
+    console.log("Ya lo agregue")
+    res.status(201).send();
   } catch (err) {
     console.error("Error adding score:", err);
     res.status(500).json({ error: "Failed to add score to leaderboard" });
@@ -26,7 +29,7 @@ app.post("/scores", async (req, res) => {
 app.post("/database", async (req, res) => {
   try {
     await createDatabase();
-    res.status(201);
+    res.status(201).send();
   } catch (err) {
     console.error("Error creating database:", err);
     res.status(500).json({ error: "Failed to create database"});
