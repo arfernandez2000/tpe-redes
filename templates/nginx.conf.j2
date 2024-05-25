@@ -1,0 +1,15 @@
+events {}
+http {
+   upstream backend {
+      server {{ ip_ws_1 }}:{{ port_ws }};
+      server {{ ip_ws_2 }}:{{ port_ws }};
+   }
+
+   server {
+      listen {{ lb_port }}; 
+
+      location / {
+          proxy_pass http://backend;
+      }
+   }
+}

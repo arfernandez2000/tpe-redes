@@ -1,0 +1,41 @@
+---
+- name: Configure Load Balancer in VM
+  hosts: lb
+  become: yes
+  remote_user: azureuser
+
+  vars:
+    ip_ws_1: "{{ groups['ws'][0] }}"
+    ip_ws_2: "{{ groups['ws'][1] }}"
+    port_ws: 3000
+    lb_port: 8080
+    nginx_conf_directory: /etc/nginx
+
+  tasks:
+    - name: Ensure NGINX is installed
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        # update_cache: yes
+
+    - name: Ensure NGINX is started and enabled
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: yes
+    
+    - name: Deploy nginx.conf from template
+      ansible.builtin.template:
+        src: ../templates/nginx.conf.j2
+        dest: "{{ nginx_conf_directory }}/nginx.conf"
+        mode: '0644'
+
+    - name: Remove default configuration
+      ansible.builtin.file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+
+    - name: Restart Nginx service
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
