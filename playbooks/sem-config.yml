@@ -1,5 +1,5 @@
 - name: Install Semaphore UI
-  hosts: semaphore
+  hosts: public
   become: true
   remote_user: azureuser
 

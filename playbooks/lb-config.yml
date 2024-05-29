@@ -1,6 +1,6 @@
 ---
 - name: Configure Load Balancer in VM
-  hosts: lb
+  hosts: public
   become: yes
   remote_user: azureuser
 
@@ -16,7 +16,7 @@
       ansible.builtin.apt:
         name: nginx
         state: present
-        # update_cache: yes
+        update_cache: yes
 
     - name: Ensure NGINX is started and enabled
       ansible.builtin.systemd:
