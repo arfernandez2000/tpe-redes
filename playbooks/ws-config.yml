@@ -4,9 +4,9 @@
   become: true
   remote_user: azureuser
   tasks:
-    # - name: apt-get update
-    #   ansible.builtin.apt:
-    #     update_cache: yes
+    - name: apt-get update
+      ansible.builtin.apt:
+        update_cache: yes
 
     - name: Install required system packages
       ansible.builtin.apt:

@@ -34,6 +34,10 @@
       ansible.builtin.apt_key:
         url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
         state: present
+    
+    - name: apt-get update
+      ansible.builtin.apt:
+        update_cache: yes
 
     - name: Install PostgreSQL and PostgreSQL Client
       ansible.builtin.apt:

@@ -39,3 +39,12 @@
       ansible.builtin.service:
         name: nginx
         state: restarted
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - python3
+        - ansible
+        - ansible-core
