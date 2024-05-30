@@ -231,6 +231,16 @@ terraform apply -auto-approve
 
 Como se aclaró antes, para que la ip pública se copie bien en el inventorio, se debe volver a correr el `terraform apply --auto-approve`.
 
+### Git Push
+
+Para poder tener el repositorio actualizado con las llaver privadas y el inventorio creado, se debe correr desde el directorio root:
+
+```
+git push
+```
+
+Esto permitira que al clonar el repo dentro de la VM Pública, esten disponibles todos los archivos necesarios.
+
 ### Configurar VM Pública
 
 Para configurar la VM pública donde van a estar el Load Balancer (expuesto en el puerto 8080) y Sempahone (en el puerto 3000), se debe ejecutar en el directorio root el playbook `public-config.yml` de la siguiente manera:

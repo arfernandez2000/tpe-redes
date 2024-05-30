@@ -5,7 +5,6 @@
   remote_user: azureuser
 
   vars:
-    postgresql_version: 12
     postgresql_data_directory: /var/lib/postgresql/{{ postgresql_version }}/main
     postgresql_conf_directory: /etc/postgresql/{{ postgresql_version }}/main
     postgresql_listen_addresses: '*'
@@ -45,6 +44,15 @@
           - postgresql
           - postgresql-client
         state: present
+
+    - name: Consult PostgreSQL Version
+      ansible.builtin.shell: |
+        ls /etc/postgresql/ | cat
+      register: postgres_version_output
+
+    - name: Set version number as fact
+      set_fact:
+        postgresql_version: "{{ postgres_version_output.stdout }}"
 
     - name: Install python, psycopg2 and acl
       ansible.builtin.apt:

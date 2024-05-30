@@ -58,3 +58,8 @@
         enabled: yes
         state: started
 
+    - name: Restart Nginx in localhost
+      ansible.builtin.service:
+          name: nginx
+          state: restarted
+      delegate_to: localhost
