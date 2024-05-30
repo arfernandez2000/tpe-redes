@@ -77,3 +77,19 @@
 
     - name: Download collection from Ansible Galaxy
       command: ansible-galaxy -vvv collection install community.general
+
+    - name: Clone TPE Redes Repo from GitHub
+      ansible.builtin.git:
+        repo: https://github.com/arfernandez2000/tpe-redes
+        dest: ./tpe-redes
+        single_branch: yes
+        version: main
+
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: "./tpe-redes/keys/{{ item }}"
+        mode: '0400'
+      loop:
+       - private.pem
+       - db_private.pem
+       - ws_private.pem
