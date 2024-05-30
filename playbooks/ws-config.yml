@@ -20,6 +20,7 @@
       ansible.builtin.copy:
         src: ../web-server
         dest: ./
+      notify: Restart node-app
 
     - name: npm install
       ansible.builtin.command:
@@ -63,3 +64,9 @@
           name: nginx
           state: restarted
       delegate_to: localhost
+
+  handlers:
+    - name: Restart node-app
+      ansible.builtin.systemd:
+        name: node-app
+        state: restarted
