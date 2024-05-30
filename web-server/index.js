@@ -26,7 +26,7 @@ app.get("/leaderboards", async (req, res) => {
     res.status(200).json(leaderboard);
   } catch (err) {
     console.error("Error retrieving leaderboard:", err);
-    res.status(500).json({ error: "Failed to retrieve leaderboard", stacktrace: err.message });
+    res.status(500).json({ error: "Failed to retrieve leaderboard", stacktrace: err.message, DB_HOST: process.env.DB_HOST });
   }
 });
 
