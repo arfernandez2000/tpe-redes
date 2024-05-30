@@ -1,10 +1,12 @@
----
-- name: Configure Load Balancer in VM
+- name: Configure Public VM with Load Balancer, Semaphore and Ansible
   hosts: public
   become: yes
   remote_user: azureuser
 
   vars:
+    semaphore_admin_user: admin
+    semaphore_admin_email: azul-k@hotmail.com
+    semaphore_admin_password: admin
     ip_ws_1: "{{ groups['ws'][0] }}"
     ip_ws_2: "{{ groups['ws'][1] }}"
     port_ws: 3000
@@ -12,6 +14,24 @@
     nginx_conf_directory: /etc/nginx
 
   tasks:
+    - name: Install semaphore with Snap
+      community.general.snap:
+        name: semaphore
+        state: present
+
+    - name: Get user if exists
+      command: semaphore user get --login {{ semaphore_admin_user }}
+      ignore_errors: true
+      register: user
+
+    - name: Create admin user 
+      command: semaphore user add --admin --login {{ semaphore_admin_user }} --name={{ semaphore_admin_user }} --email={{ semaphore_admin_email }} --password={{ semaphore_admin_password }}
+      when: user.stderr != ""
+
+    - name: Check status of Semaphore service with Snap
+      community.general.snap:
+        name: semaphore
+
     - name: Ensure NGINX is installed
       ansible.builtin.apt:
         name: nginx

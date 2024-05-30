@@ -1,11 +1,28 @@
 const express = require("express");
+var os = require('os');
 const { addScore, getLeaderboard, createDatabase } = require("./repository");
 const app = express();
 app.use(express.json())
 
+var networkInterfaces = os.networkInterfaces();
+
+function getLocalIp() {
+  var localIp = "";
+  Object.keys(networkInterfaces).forEach((key) => {
+    networkInterfaces[key].forEach((network) => {
+      if (network.family === "IPv4" && !network.internal) {
+        localIp = network.address;
+      }
+    });
+  });
+  return localIp;
+}
+
 app.get("/leaderboards", async (req, res) => {
   try {
     const leaderboard = await getLeaderboard();
+    console.log(getLocalIp())
+    leaderboard.ip = getLocalIp();
     res.status(200).json(leaderboard);
   } catch (err) {
     console.error("Error retrieving leaderboard:", err);
@@ -18,7 +35,7 @@ app.post("/scores", async (req, res) => {
   const score = req.body.score;
   try {
     await addScore(name, score);
-    console.log("Ya lo agregue")
+    console.log(getLocalIp())
     res.status(201).send();
   } catch (err) {
     console.error("Error adding score:", err);
