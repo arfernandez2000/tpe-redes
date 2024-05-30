@@ -132,6 +132,7 @@
       when: primary is defined and primary
 
     - name: Create PostgreSQL user - myuser
+      become: true
       become_user: postgres
       community.postgresql.postgresql_user:
         name: "{{ postgresql_user }}"
