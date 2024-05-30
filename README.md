@@ -5,12 +5,16 @@
 ### Ansible 2.15.10
 **MacOS**
 
-`brew install hashicorp/tap/terraform`
+```
+brew install hashicorp/tap/terraform
+```
 
 Link a la página oficial: https://developer.hashicorp.com/terraform/install
 
 ### Terraform 1.8.4
-`pip install ansible`
+```
+pip install ansible
+```
 
 Link a la página oficial: https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
 
@@ -50,13 +54,13 @@ A continuación, se necesita crear una Virtual Network donde se puedan deployar 
 
 ### Las Virtual Machines
 
-Para el proyecto se necesitaron desplegar 5 máquinas virtuales:
+Para el proyecto se necesitaron deployar 5 máquinas virtuales:
 
-- Dos para levantar los servidores web, llamadas **ws_vms**.
-- Una para levantar la base de datos primaria y otra para la secundaria, llamadas **db_vms**.
-- Una para levantar el load balancer y además configurar Semaphore, llamada **public_vm**.
+- Dos para levantar los servidores web, que de ahora en más llamaremos **ws_vms**.
+- Una para levantar la base de datos primaria y otra para la secundaria, que llamaremos **db_vms**.
+- Una para levantar el load balancer y además configurar Semaphore, que llamaremos **public_vm**.
 
-Para todas las máquinas virtuales se utilizó el recurso `azurerm_linux_virtual_machine` con el tamaño `size` configurado como *"Standard_F2"* para **public_vm** y *"Standard_B1ls"* para las demás. En todas se configuró el `admin_username` como *"azureuser"* y se utilizaron los siguientes bloques de `source_image_reference` y `os_disk`:
+Para todas las máquinas virtuales se utilizó el recurso `azurerm_linux_virtual_machine` con el `size` configurado como *"Standard_F2"* para **public_vm** y *"Standard_B1ls"* para las demás. En todas se configuró el `admin_username` como *"azureuser"* y se utilizaron los siguientes bloques de `source_image_reference` y `os_disk`:
 
 ```hcl
 os_disk {
@@ -72,19 +76,19 @@ source_image_reference {
 }
 ```
 
-Para configurar el acceso a las VMs, se utilizó un recurso llamado `tls_private_key` del proveedor *tls* para crear claves SSH específicas para cada tipo de VM (__ws_vms__, __db_vms__ y __lb_vm__). Una vez creado el recurso, se referenció en el bloque `admin_ssh_key`, atributo `public_key`, utilizando `tls_private_key.ssh.public_key_openssh`.
+Para configurar el acceso a las VMs, se utilizó un recurso llamado `tls_private_key` del proveedor *tls* para crear claves SSH específicas para cada tipo de VM (__ws_vms__, __db_vms__ y __public_vm__). Una vez creado el recurso, se asigno el`tls_private_key.ssh.public_key_openssh` correspondiente para cada tipo de VM al atributo `public_key` del bloque `admin_ssh_key`.
 
-Además, para cada tipo de VM fue necesario crear una Network Interface. Esto se hizo utilizando el recurso `azurerm_network_interface` con la `ip_configuration`, marcando el `subnet_id` correspondiente creado anteriormente. Para la __lb_vm__, en el bloque `ip_configuration`, se añadió el `public_ip_address_id` con el ID que es el resultado del recurso `azurerm_public_ip`.
+Además, para cada tipo de VM fue necesario crear una Network Interface. Esto se hizo utilizando el recurso `azurerm_network_interface` asignando al atributo `subnet_id` del bloque `ip_configuration` el id de la subnet default creada anteriormente. Para la __public_vm__, en el bloque `ip_configuration`, se añadió el `public_ip_address_id` con el ID que es el resultado del recurso `azurerm_public_ip`.
 
-Por último, se creó para cada tipo de VM un Network Security Group utilizando el recurso `azurerm_network_security_group`. Para los tres NSG, se habilitó el puerto `22` para las conexiones SSH. Sin embargo, en el NSG de __lb_vm__, el `source_address_prefix` se configuró en _"*"_, mientras que en los otros se configuró en *10.0.0.0/24*. Esto asegura que solo las solicitudes provenientes de la subred predeterminada puedan acceder a __ws_vms__ y __db_vms__ por SSH.
+Por último, se creó para cada tipo de VM un Network Security Group utilizando el recurso `azurerm_network_security_group`. Para los tres NSG, se habilitó el puerto `22` para las conexiones SSH. Sin embargo, en el NSG de __public_vm__, el `source_address_prefix` se configuró en _"*"_, mientras que en los otros se configuró en *10.0.0.0/24*. Esto asegura que solo las solicitudes provenientes de la subred default puedan acceder a __ws_vms__ y __db_vms__ por SSH.
 
-Luego, se habilitó el puerto `3000` tanto para __lb_vm__ como para __ws_vms__, donde en estas últimas el source_address_prefix también se limitó a la subred predeterminada. En __lb_vm__, este puerto expone la interfaz de Semaphore, y en __ws_vms__ expone el servidor web.
+Luego, se habilitó el puerto `3000` tanto para __public_vm__ como para __ws_vms__, donde en estas últimas el `source_address_prefix` también se limitó a la subred default. En __public_vm__, este puerto expone la interfaz de Semaphore, y en __ws_vms__ expone el servidor web.
 
-Para __db_vms__, se habilitó el puerto `5432`, con source_address_prefix configurado en la subred predeterminada, asegurando que solo las conexiones dentro de la misma subred puedan acceder a la base de datos.
+Para __db_vms__, se habilitó el puerto `5432`, atribuyendo a `source_address_prefix` el rango de IPs de la subred default, asegurando que solo las conexiones dentro de la misma subred puedan acceder a la base de datos.
 
-Por último, se habilitó el puerto `8080` para __lb_vm__ con cualquier origen (source_address_prefix configurado en _"*"_) para permitir el acceso a través del balanceador de carga al servidor web.
+Por último, se habilitó el puerto `8080` para __public_vm__ con cualquier origen (`source_address_prefix` configurado en _"*"_) para permitir el acceso a través del load balancer al servidor web.
 
-Todas estas configuraciones de reglas se realizan utilizando el bloque `security_rule` dentro de el recurso `azurerm_network_security_group`, como se muestra a continuación con el ejemplo de Allow3000 para las ws_vms:
+Todas estas configuraciones de reglas se realizan utilizando el bloque `security_rule` dentro de el recurso `azurerm_network_security_group`, como se muestra a continuación con el ejemplo de *Allow3000* para las __ws_vms__:
 
 ```hcl
 security_rule {
@@ -102,13 +106,17 @@ security_rule {
 
 ### Post Procesamiento
 
-Por ultimo se utilizo el provider __"local"__ para utilizar el recurso `local_file`. Con este recurso, se logra crear archivos que son necesarios para la ejecucion de los playbooks de Ansible. Primero se crean tres archivos dentro del directorio keys. Estos archivos son:
+Claro, aquí tienes la última sección mejorada y formateada adecuadamente:
 
-- private.pem, que contiene la llave privada que se creo con `tls_private_key` para la configuración ssh de __lb_vm__
-- db_private.pem, que contiene la llave privada que se creo con `tls_private_key` para la configuración ssh de __db_vms__
-- ws_private.pem, que contiene la llave privada que se creo con `tls_private_key` para la configuración ssh de __ws_vms__
+---
 
-Luego, se crea el inventorio dentro del diretorio correspondiente con todas las IPs de las VMs creadas con el siguiente codigo:
+Por último, se utilizó el proveedor *local* para utilizar el recurso `local_file`. Con este recurso, se logran crear archivos que son necesarios para la ejecución de los playbooks de Ansible. Primero, se crean tres archivos dentro del directorio `keys`. Estos archivos son:
+
+- `private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **public_vm**.
+- `db_private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **db_vms**.
+- `ws_private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **ws_vms**.
+
+Luego, se crea el inventario dentro del directorio correspondiente con todas las IPs de las VMs creadas con el siguiente código:
 
 ```hcl
 resource "local_file" "inventory" {
@@ -121,8 +129,8 @@ resource "local_file" "inventory" {
     ${azurerm_linux_virtual_machine.vms_ws[1].private_ip_address} ansible_ssh_private_key_file="keys/ws_private.pem"
 
     [db]
-    ${azurerm_linux_virtual_machine.vms_db[0].private_ip_address} ansible_ssh_private_key_file="keys/db_private.pem"
-    ${azurerm_linux_virtual_machine.vms_db[1].private_ip_address} ansible_ssh_private_key_file="keys/db_private.pem"
+    ${azurerm_linux_virtual_machine.vms_db[0].private_ip_address} ansible_ssh_private_key_file="keys/db_private.pem" primary=true
+    ${azurerm_linux_virtual_machine.vms_db[1].private_ip_address} ansible_ssh_private_key_file="keys/db_private.pem" secondary=true
 
   EOT
   filename = "../inventory/inventory.ini"
@@ -131,12 +139,12 @@ resource "local_file" "inventory" {
 
 ### Error de IP Pública
 
-Las Dynamic Public IP Addresses no se asignan hasta que están adjuntas a un dispositivo, por lo que en la primera ejecución del apply, el output de azurerm_public_ip.public_ip.ip_address queda vacío. Por lo tanto, es necesario volver a ejecutar terraform apply para que se cree el archivo `inventory.ini` correctamente.
+Las Dynamic Public IP Addresses no se asignan hasta que están adjuntas a un dispositivo, por lo que en la primera ejecución del `terraform apply`, el output de `azurerm_public_ip.public_ip.ip_address` queda vacío. Por lo tanto, es necesario volver a ejecutar `terraform apply` para que se cree el archivo `inventory.ini` correctamente.
 
 ## Ansible
 
 ### Inventory
-Dentro del archivo `inv.ini`, para cada una de las Virtual Machines se especifica:
+Dentro del archivo `inventory.ini`, para cada una de las Virtual Machines se especifica:
 - Nombre del grupo de hosts, que deberá coincidir con la propiedad `hosts` del playbook
 - IP y una variable 
 - `ansible_ssh_private_key_file` con el path a su llave privada
@@ -207,3 +215,58 @@ Semaphore UI es una herramienta open-source para gestionar y ejecutar playbooks 
     [<img src="images/semui-run-task.png" height="400"/>](images/semui-run-task.png)
 
 Al finalizar la ejecución, se mostrará el resultado de correr el playbook.
+
+## Ejecución
+
+### Deployar la Infraestructura
+Primero se debe deployar la infraestructura donde se van a encontrar los hosts remotos del inventorio de los playbooks de Ansible. Para esto, solo se deben correr los siguientes comandos:
+
+```
+cd terraform
+terraform plan
+terraform apply -auto-approve
+```
+
+> Nota: el output del `terraform plan` debe verificarse para confirmar los recursos que se deployarán
+
+Como se aclaró antes, para que la ip pública se copie bien en el inventorio, se debe volver a correr el `terraform apply --auto-approve`.
+
+### Configurar VM Pública
+
+Para configurar la VM pública donde van a estar el Load Balancer (expuesto en el puerto 8080) y Sempahone (en el puerto 3000), se debe ejecutar en el directorio root el playbook `public-config.yml` de la siguiente manera:
+
+```
+ansible-playbook -i inventory/inventory.ini playbooks/public-config.yml
+```
+
+Con este playbook, van a quedar configurados los requerimientos para poder correr los otros playbooks desde allí. 
+
+### Configurar Webserver and Data Base VMs
+
+Para poder configurar las VMs donde va a estar corriendo el webserver y la base de datos, se debe acceder a la VM pública por SSH con el siguinete comando desde el directorio root:
+
+```
+ssh -i keys/private.pem azureuser@[public_ip]
+```
+
+Una vez dentro solamente hay que correr:
+
+```
+cd tpe-redes
+sudo ansible-playbook -i inventory/inventory.ini playbooks/ws-config.yml
+sudo ansible-playbook -i inventory/inventory.ini playbooks/db-config.yml
+```
+
+> Obs: La ejecución del playbook es bastante larga
+
+> Nota: Se recomienda intentar acceder a los hosts remotos de los grupos _ws_ y _db_ antes de correr los playbooks para que no aparezca el mensaje interactivo _"The authenticity of host '10.0.0.* (10.0.0.*)' can't be established."_, lo que resulta en una incomodidad a la hora de correr el playbook.  También se podrían agregar las IPs al archivo `authorized_hosts`.
+
+### Destruir la Infrastructura
+Para destruir la infrastructura, se deben ejecutar los siguientes comandos:
+
+```
+terraform destroy
+terraform destroy
+```
+
+> Nota: el comando `terraform destroy` se debe ejecutar dos veces debido a un problema en la secuencia de los recursos. En el momento en que se intenta de eliminar la IP pública, esta sigue estando en uso y, por lo tanto, causa un error. Por eso, se debe correr una segunda vez este comando para eliminar por completo todos los erecursos.
