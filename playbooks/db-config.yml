@@ -144,6 +144,7 @@
         db: "{{ postgresql_database }}"
         state: present
         privs: ALL
+        schema: public
         objs: ALL_IN_SCHEMA
         role: "{{ postgresql_user }}"
       when: primary is defined and primary
@@ -226,6 +227,7 @@
         pg_basebackup -h {{ groups['db'][0] }} -U {{ replication_user }} -X stream -C -S replica_lpm -v -R -D {{ postgresql_data_directory }}
       environment:
         PGPASSWORD: "{{ replication_password }}"
+      ignore_errors: true
       when: secondary is defined and secondary
 
     - name: Create PostgreSQL data directory on replica

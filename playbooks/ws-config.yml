@@ -50,6 +50,7 @@
           WantedBy=multi-user.target
         dest: /etc/systemd/system/node-app.service
         mode: '0644'
+      notify: Restart node-app
 
     - name: Reload systemd to pick up new service file
       ansible.builtin.command: systemctl daemon-reload
