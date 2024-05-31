@@ -1,5 +1,5 @@
 locals {
-  ip_address_id = "/subscriptions/2d8d30e6-91ec-4d7d-835b-4a73170915e1/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Network/publicIPAddresses/public-ip"
+  ip_address_id = "/subscriptions/6f21dcad-00e6-4158-8f70-2ea60ad42b29/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Network/publicIPAddresses/public-ip"
 }
 
 

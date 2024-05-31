@@ -18,6 +18,15 @@ pip install ansible
 
 Link a la página oficial: https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
 
+### Azure CLI
+**MacOS**
+
+```
+brew install azure-cli
+```
+
+Link a la página oficial: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
+
 ## Resumen
 El objetivo de este proyecto es demostrar el funcionamiento de la herramienta Ansible, utilizándola para orquestar el despliegue de una aplicación sencilla que mantiene un leaderboard con los 10 mejores puntajes de un videojuego. Esta tiene 3 endpoints HTTP:
 
@@ -36,6 +45,14 @@ Para soportar esta funcionalidad, se van a levantar dos web servers identicos es
 ### Estrategia
 
 Para ejecutar este sistema, primero se debe ejecutar el playbook `public-config.yml` desde una computadora local. Este playbook descargará todas las dependencias necesarias en la máquina virtual expuesta públicamente, incluido Ansible y Semaphore UI, para luego poder ejecutar el resto de los playbooks desde la subred privada. De esta manera, alcanza con exponer una sola IP publica para tener acceso a toda la infraestructura remota.
+
+## Azure CLI
+
+Para poder utilizar este proyecto, se necesitará una cuenta de Microsoft Azure. Una vez creada la cuenta, instale Azure CLI en su terminal e inicie sesión con el siguiente comando:
+
+```
+az login
+```
 
 ## Terraform
 
@@ -106,10 +123,6 @@ security_rule {
 
 ### Post Procesamiento
 
-Claro, aquí tienes la última sección mejorada y formateada adecuadamente:
-
----
-
 Por último, se utilizó el proveedor *local* para utilizar el recurso `local_file`. Con este recurso, se logran crear archivos que son necesarios para la ejecución de los playbooks de Ansible. Primero, se crean tres archivos dentro del directorio `keys`. Estos archivos son:
 
 - `private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **public_vm**.
@@ -179,6 +192,9 @@ En todos los playbooks, se deberá especificar:
 
 #### public-config.yml 
 
+```
+ansible-playbook -vvvv --private-key=./keys/private.pem -i ./inventory/inventory.ini ./playbooks/public-config.yml
+```
 
 ## Semaphore UI
 Semaphore UI es una herramienta open-source para gestionar y ejecutar playbooks de Ansible. Para correr un playbook en esta plataforma, se deben seguir las siguientes instrucciones:
