@@ -147,6 +147,7 @@
         type: schema
         objs: public
         role: "{{ postgresql_user }}"
+      when: primary is defined and primary
 
     - name: Allow user myuser to do all actions in database mydatabase
       become_user: postgres
