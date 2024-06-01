@@ -139,6 +139,15 @@
         password: "{{ postgresql_password }}"
       when: primary is defined and primary
 
+    - name: GRANT ALL PRIVILEGES ON SCHEMA public to user 
+      become_user: postgres
+      community.postgresql.postgresql_privs:
+        db: "{{ postgresql_database }}"
+        privs: ALL
+        type: schema
+        objs: public
+        role: "{{ postgresql_user }}"
+
     - name: Allow user myuser to do all actions in database mydatabase
       become_user: postgres
       community.postgresql.postgresql_privs:
