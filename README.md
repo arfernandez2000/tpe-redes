@@ -2,7 +2,7 @@
 
 ## Requerimientos mínimos
 
-### Ansible 2.15.10
+### Terraform 1.8.4
 **MacOS**
 
 ```
@@ -11,7 +11,7 @@ brew install hashicorp/tap/terraform
 
 Link a la página oficial: https://developer.hashicorp.com/terraform/install
 
-### Terraform 1.8.4
+### Ansible 2.15.10
 ```
 pip install ansible
 ```
