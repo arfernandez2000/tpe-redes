@@ -21,9 +21,7 @@ function getLocalIp() {
 app.get("/leaderboards", async (req, res) => {
   try {
     const leaderboard = await getLeaderboard();
-    console.log(getLocalIp())
-    leaderboard.ip = getLocalIp();
-    res.status(200).json(leaderboard);
+    res.status(200).json({data: leaderboard, instance: getLocalIp()});
   } catch (err) {
     console.error("Error retrieving leaderboard:", err);
     res.status(500).json({ error: "Failed to retrieve leaderboard", stacktrace: err.message, DB_HOST: process.env.DB_HOST });
