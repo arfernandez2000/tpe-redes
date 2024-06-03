@@ -23,7 +23,7 @@ resource "azurerm_linux_virtual_machine" "vms_db" {
   name                = "db${count.index}-machine"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  size                = "Standard_B1ls"
+  size                = "Standard_B1ms"
   admin_username      = "azureuser"
   network_interface_ids = [
     azurerm_network_interface.db_nic[count.index].id,

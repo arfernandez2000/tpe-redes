@@ -1,5 +1,8 @@
+data "azurerm_subscription" "current" {
+}
+
 locals {
-  ip_address_id = "/subscriptions/6f21dcad-00e6-4158-8f70-2ea60ad42b29/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Network/publicIPAddresses/public-ip"
+  ip_address_id = "/subscriptions/${data.azurerm_subscription.current.subscription_id}/resourceGroups/${azurerm_resource_group.rg.name}/providers/Microsoft.Network/publicIPAddresses/public-ip"
 }
 
 
