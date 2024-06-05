@@ -65,6 +65,8 @@
       ansible.builtin.service:
           name: nginx
           state: restarted
+      become: true
+      become_method: sudo
       delegate_to: localhost
 
   handlers:
