@@ -61,25 +61,14 @@
         enabled: yes
         state: started
 
-#    - name: Restart Nginx in localhost
-#      ansible.builtin.service:
-#          name: nginx
-#          state: restarted
-#      delegate_to: localhost
+    - name: Restart Nginx in localhost
+      ansible.builtin.service:
+          name: nginx
+          state: restarted
+      delegate_to: localhost
 
   handlers:
     - name: Restart node-app
       ansible.builtin.systemd:
         name: node-app
-        state: restarted
-
-- name: Reload Load Balancer
-  hosts: localhost
-  connection: local
-  become: true
-  gather_facts: no
-  tasks:
-    - name: Restart Nginx in localhost
-      ansible.builtin.service:
-        name: nginx
         state: restarted
