@@ -62,11 +62,9 @@
         state: started
 
     - name: Restart Nginx in localhost
-      ansible.builtin.service:
+      ansible.builtin.systemd:
           name: nginx
           state: restarted
-      become: true
-      become_user: root
       delegate_to: localhost
 
   handlers:
