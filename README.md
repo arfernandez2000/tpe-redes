@@ -1,4 +1,4 @@
-# TPE Redes - Tema 10: Ansible
+# How-To: Ansible
 
 ## Requerimientos mínimos
 
@@ -28,7 +28,7 @@ brew install azure-cli
 Link a la página oficial: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
 
 ## Resumen
-El objetivo de este proyecto es demostrar el funcionamiento de la herramienta Ansible, utilizándola para orquestar el despliegue de una aplicación sencilla que mantiene un leaderboard con los 10 mejores puntajes de un videojuego. Esta tiene 3 endpoints HTTP:
+El objetivo de este proyecto es demostrar el funcionamiento de la herramienta Ansible, utilizándola para orquestar el deployment de una aplicación sencilla que mantiene un leaderboard con los 10 mejores puntajes de un videojuego. Esta tiene 3 endpoints HTTP:
 
 * **POST /database** - Inicializar la tabla de la base de datos
 
@@ -38,7 +38,7 @@ El objetivo de este proyecto es demostrar el funcionamiento de la herramienta An
     
 * **GET /leaderboards** - Obtener los 10 mejores scores
 
-Para soportar esta funcionalidad, se van a levantar dos web servers idénticos escritos con Node.js. Estos estarán conectadas a una base de datos relacional PostgreSQL, la cual tendrá una réplica redundante con el objetivo de aumentar la resiliencia y disponibilidad del sistema. Finalmente, se implementará un servidor nginx que acepte el tráfico entrante y lo redirija a los dos servidores web utilizando Round Robin como metodo de balanceo.
+Para soportar esta funcionalidad, se van a levantar dos web servers idénticos escritos con Node.js. Estos estarán conectadas a una base de datos relacional PostgreSQL, la cual tendrá una réplica redundante con el objetivo de aumentar la resiliencia y disponibilidad del sistema. Finalmente, se implementará un servidor nginx que acepte el tráfico entrante y lo redirija a los dos servidores web utilizando Round Robin como método de balanceo.
 
 [<img src="images/image.png" height="400"/>](images/image.png)
 
@@ -77,7 +77,7 @@ Para el proyecto se necesitaron deployar 5 máquinas virtuales:
 - Una para levantar la base de datos primaria y otra para la secundaria, que llamaremos **db_vms**.
 - Una para levantar el load balancer y además configurar Semaphore, que llamaremos **public_vm**.
 
-Para todas las máquinas virtuales se utilizó el recurso `azurerm_linux_virtual_machine` con el `size` configurado como *"Standard_F2"* para **public_vm** y *"Standard_B1ls"* para las demás. En todas se configuró el `admin_username` como *"azureuser"* y se utilizaron los siguientes bloques de `source_image_reference` y `os_disk`:
+Para todas las máquinas virtuales se utilizó el recurso `azurerm_linux_virtual_machine` con el `size` configurado como *"Standard_F2"* para **public_vm** y *"Standard_B1ms"* para las demás. En todas se configuró el `admin_username` como *"azureuser"* y se utilizaron los siguientes bloques de `source_image_reference` y `os_disk`:
 
 ```hcl
 os_disk {
@@ -129,7 +129,7 @@ Por último, se utilizó el proveedor *local* para utilizar el recurso `local_fi
 - `db_private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **db_vms**.
 - `ws_private.pem`, que contiene la llave privada creada con `tls_private_key` para la configuración SSH de **ws_vms**.
 
-Luego, se crea el inventario dentro del directorio correspondiente con todas las IPs de las VMs creadas con el siguiente código:
+Luego, se crea el inventory dentro del directorio correspondiente con todas las IPs de las VMs creadas con el siguiente código:
 
 ```hcl
 resource "local_file" "inventory" {
@@ -180,6 +180,40 @@ El formato es el siguiente:
 
 Se empleará Jinja para los archivos de configuración de Nginx y PostgreSQL. En el caso de PostgreSQL, se ha optado por separar la configuración en dos archivos distintos: uno para definir cómo se ejecutará el servicio (incluyendo puertos y el número máximo de conexiones) y otro para gestionar la configuración de usuarios y accesos.
 
+Las variables dentro de las dobles llaves `{{ }}` son placeholders que Jinja2 rellenará con valores específicos cuando se renderice la plantilla. A continuacion se describen que valores se se parametrizan en cada archivo de configuracion:
+
+### nginx.confg
+
+`{{ ip_ws_1 }}`: Dirección IP del primer servidor backend.
+
+`{{ ip_ws_2 }}`: Dirección IP del segundo servidor backend.
+
+`{{ port_ws }}`: Puerto donde se disponibilizaran ambos servidores backend.
+
+`{{ lb_port }}`: Puerto en el que el nginx escuchará las solicitudes.
+
+### pg_hba.conf
+
+`{{ item.type }}`: 
+
+`{{ item.database }}`: 
+
+`{{ item.user }}`: 
+
+`{{ item.address }}`: 
+
+`{{ item.method }}`: 
+
+### postgresql.conf
+
+`{{ postgresql_data_directory }}`: Se reemplazará por el valor del directorio de datos de PostgreSQL.
+
+`{{ postgresql_listen_addresses }}`: Se reemplazará por las direcciones IP en las que PostgreSQL debe escuchar.
+
+`{{ postgresql_max_connections }}`: Se reemplazará por el número máximo de conexiones permitidas.
+
+`{{ postgresql_shared_buffers }}`: Se reemplazará por el valor de los buffers compartidos.
+
 ### Playbooks
 En todos los playbooks, se deberá especificar:
 - `name`: Nombre del playbook
@@ -191,34 +225,34 @@ En todos los playbooks, se deberá especificar:
 
 #### <u>public-config.yml</u>
 
-Este playbook tiene como objetivo principal configurar una máquina virtual pública con una serie de componentes necesarios para su funcionamiento. Comienza instalando `Semaphore`, una plataforma de integración y entrega continua, utilizando `Snap`, un gestor de paquetes. Luego, verifica si existe un usuario específico en Semaphore. En caso de que no exista, crea un usuario administrador con las credenciales especificadas, como nombre de usuario, correo electrónico y contraseña.
+Este playbook tiene como objetivo principal configurar una máquina virtual pública con una serie de componentes necesarios para su funcionamiento. Comienza instalando `Semaphore` utilizando `Snap`, un gestor de paquetes. Luego, verifica si existe un usuario específico en Semaphore. Este paso es necesario para los casos donde el playbook deba correrse por segunda vez, ya que si el usuario de Semaphore ya existe, el siguiente task falla. En caso de que el usuario no exista, crea un usuario administrador con las credenciales especificadas, como nombre de usuario, correo electrónico y contraseña. Si ya existe, este task se saltea.
 
-A continuación, se asegura de que `NGINX`, un servidor web y balanceador de carga, esté instalado y actualizado en la máquina virtual. Esto incluye iniciar el servicio NGINX y habilitarlo para que se ejecute automáticamente en el arranque del sistema. Además, despliega una configuración personalizada de NGINX desde una template y elimina la configuración predeterminada para evitar conflictos. Finalmente, reinicia el servicio NGINX para aplicar los cambios realizados.
+A continuación, se asegura de que `NGINX`, un servidor web y balanceador de carga, esté instalado y actualizado en la máquina virtual. Esto incluye iniciar el servicio NGINX y habilitarlo para que se ejecute automáticamente en el arranque del sistema. Además, deploya una configuración personalizada de NGINX desde una template y elimina la configuración predeterminada para evitar conflictos. Finalmente, reinicia el servicio NGINX para aplicar los cambios realizados.
 
 Después de configurar NGINX, el playbook procede a instalar paquetes necesarios en el sistema, como `Python 3` y `pip`, el gestor de paquetes de Python. Luego, utiliza pip para instalar `Ansible` y `Ansible Core`.
 
 Además de instalar Ansible localmente, el playbook descarga la colección `community.general` de Ansible Galaxy, que contiene módulos y plugins adicionales para Ansible. Este paso es necesario para que al correr los otros plybooks dentro de esta máquina virtual, tenga los módulos necesarios para las configuraciones de PostgreSQL.
 
-Por último, el playbook copia el código del proyecto desde un directorio local a la máquina virtual. Esto garantiza que todos los archivos y recursos necesarios para el proyecto estén disponibles en el entorno de la máquina virtual. Además, ajusta los permisos de ciertos archivos clave, como archivos .pem, para garantizar la seguridad y limitar el acceso solo al propietario de la máquina virtual.
+Por último, el playbook copia el código del proyecto desde un directorio local a la máquina virtual. Esto garantiza que todos los archivos y recursos necesarios para el proyecto estén disponibles en el entorno de la máquina virtual. Además, ajusta los permisos de los archivos .pem, que son las llaves para las máquinas virtuales privadas, para garantizar la seguridad y limitar el acceso solo al propietario de la máquina virtual.
 
 
 #### <u>ws-config.yml</u>
 
-Este playbook tiene como objetivo principal configurar un servidor web para ejecutar una aplicación basada en node.js. Comienza actualizando el caché de paquetes del sistema utilizando el comando `apt-get update`. Luego, instala los paquetes necesarios para el entorno de ejecución de Node.js, incluyendo Node.js y npm, utilizando el gestor de paquetes apt. Después de instalar los paquetes, copia el código de la aplicación del servidor web desde un directorio local al servidor remoto utilizando el módulo copy de Ansible.
+Este playbook tiene como objetivo principal configurar un servidor web para ejecutar una aplicación basada en node.js. Comienza actualizando el caché de paquetes del sistema utilizando el comando `apt-get update`. Luego, instala los paquetes necesarios para el entorno de ejecución de Node.js, incluyendo Node.js y npm, utilizando el gestor de paquetes apt. Después de instalar los paquetes, copia el código de la aplicación del servidor web desde un directorio local al servidor remoto.
 
 Una vez que el código de la aplicación está en el servidor, el playbook ejecuta el comando `npm install` dentro del directorio de la aplicación para instalar todas las dependencias necesarias para su funcionamiento. Posteriormente, se configura un servicio de systemd personalizado para la aplicación Node.js, que define cómo debe iniciarse, detenerse y reiniciarse la aplicación, así como las variables de entorno necesarias para su ejecución.
 
-Después de desplegar el archivo de servicio de systemd, el playbook ejecuta el comando `systemctl daemon-reload` para recargar systemd y aplicar los cambios realizados en el archivo de servicio. Finalmente, habilita y arranca el servicio de la aplicación Node.js, asegurando que la aplicación esté disponible y se ejecute correctamente en el servidor web. Si hay cambios importantes que requieren reiniciar el servicio, se define un handler para reiniciar el servicio de manera automática.
+Después de deployar el archivo de servicio de systemd, el playbook ejecuta el comando `systemctl daemon-reload` para recargar systemd y aplicar los cambios realizados en el archivo de servicio. Finalmente, habilita y arranca el servicio de la aplicación Node.js, asegurando que la aplicación esté disponible y se ejecute correctamente en el servidor web. Si hay cambios importantes que requieren reiniciar el servicio, se define un handler para reiniciar el servicio de manera automática.
 
 #### <u>db-config.yml</u>
 
-Este playbook se encarga de configurar un servidor `PostgreSQL` en dos máquinas virtuales, una para tener la base de datos primaria y en la otra la secunda.
+Este playbook se encarga de configurar un servidor `PostgreSQL` en dos máquinas virtuales, una para tener la base de datos primaria y en la otra la secundaria.
 
 Primero, establece variables que contienen información clave, como la ubicación de los directorios de datos y configuración de `PostgreSQL`, así como credenciales de usuario y contraseña. Luego, realiza una serie de tareas para preparar el entorno. Esto incluye agregar el repositorio de `PostgreSQL`, instalar el software necesario, como el servidor y cliente `PostgreSQL`, y configurar el servicio para que se inicie automáticamente.
 
 Después, se crea el directorio de datos de `PostgreSQL` y se establecen los permisos adecuados. Se inicializa el directorio de datos y se despliegan archivos de configuración personalizados, como `postgresql.conf` y `pg_hba.conf`, para adaptar la configuración del servidor a las necesidades específicas.
 
-Se crean una base de datos y un usuario dentro de `PostgreSQL`, con los permisos necesarios para su funcionamiento. También se configuran reglas de firewall para permitir conexiones entrantes a los puertos relevantes. Además, se configuran usuarios y permisos para la replicación de datos entre servidores `PostgreSQL`.
+Se crea una base de datos y un usuario dentro de `PostgreSQL`, con los permisos necesarios para su funcionamiento. También se configuran reglas de firewall para permitir conexiones entrantes a los puertos relevantes. Además, se configuran usuarios y permisos para la replicación de datos entre servidores `PostgreSQL`.
 
 Finalmente, se realizan acciones específicas en servidores secundarios, como detener `PostgreSQL`, limpiar el directorio de datos y realizar una copia de seguridad de la base de datos desde el servidor principal.
 
@@ -233,7 +267,7 @@ A continuación se puede ver una tabla con todos los módulos utilizados en los 
 | `ansible.builtin.apt`               | Gestiona paquetes en sistemas basados en APT, permitiendo instalar, eliminar y actualizar paquetes | `public-config.yml`, `db-config.yml`, `ws-config.yml` |
 | `ansible.builtin.apt_key`           | Gestiona las claves APT para los repositorios                   | `db-config.yml`        |
 | `ansible.builtin.command`           | Ejecuta comandos en sistemas remotos sin utilizar un shell, adecuado para comandos sencillos | `public-config.yml`, `db-config.yml`, `ws-config.yml` |
-| `ansible.builtin.copy`              | Copia archivos a los hosts gestionados, permitiendo especificar permisos y propietarios del archivo | `public-config.yml`, `ws-config.yml` |
+| `ansible.builtin.copy`              | Copia archivos a los hosts remotos, permitiendo especificar permisos y propietarios del archivo | `public-config.yml`, `ws-config.yml` |
 | `ansible.builtin.file`              | Gestiona archivos y directorios, permitiendo crear, eliminar y cambiar permisos y propietarios | `public-config.yml`, `db-config.yml`, `ws-config.yml` |
 | `ansible.builtin.lineinfile`        | Gestiona líneas en archivos de texto, permitiendo agregar, modificar o eliminar líneas específicas | `db-config.yml`        |
 | `ansible.builtin.pip`               | Gestiona paquetes de Python usando `pip`, permitiendo instalar, actualizar y eliminar paquetes | `public-config.yml`        |
@@ -251,10 +285,8 @@ A continuación se puede ver una tabla con todos los módulos utilizados en los 
 
 ## Semaphore UI
 Semaphore UI es una herramienta open-source para gestionar y ejecutar playbooks de Ansible. Para correr un playbook en esta plataforma, se deben seguir las siguientes instrucciones:
-1. En caso de acceder al repositorio de Git con las llaves SSH, subir la llave privada a la tienda de llaves.
 
-    [<img src="images/semui-create-key.png" height="400"/>](images/semui-create-key.png)
-2. Conectar el repositorio a la plataforma y completar:
+1. Conectar el repositorio a la plataforma y completar:
     - Nombre
     - Link al repositorio
     - Branch a utilizar
@@ -263,10 +295,14 @@ Semaphore UI es una herramienta open-source para gestionar y ejecutar playbooks 
         - None: En caso de usar HTTPS
 
     [<img src="images/semui-create-repository.png" height="400"/>](images/semui-create-repository.png)
-3. Agregar el inventory mediante el path al archivo de inventory o definiendo los grupos y variables en el campo de texto.
+
+2. Agregar las llaves SSH para acceder a las VMs del web server y la base de datos. En caso de acceder al repositorio de Git con las llaves SSH, subir la llave privada a la tienda de llaves.
+
+    [<img src="images/semui-create-key.png" height="400"/>](images/semui-create-key.png)
+3. Agregar el inventory definiendo los grupos y variables en el campo de texto que se despliega al seleccionar el tipo static.
 
     [<img src="images/semui-create-inventory.png" height="400"/>](images/semui-create-inventory.png)
-4. Crear un environment (en este caso, estará vacío)
+4. Crear un environment (en este caso, estará vacío).
 
     [<img src="images/semui-create-environment.png" height="400"/>](images/semui-create-environment.png)
 5. Crear una tarea para la ejecución del playbook y completar:
@@ -275,11 +311,9 @@ Semaphore UI es una herramienta open-source para gestionar y ejecutar playbooks 
     - Inventory
     - Nombre de repositorio
     - Environment
-    - Argumentos:
-        - Llave privada: para el acceso a la Virtual Machine.
 
     [<img src="images/semui-create-template.png" height="400"/>](images/semui-create-template.png)
-5. Ejecutar la tarea creada en el anterior paso.
+6. Ejecutar la tarea creada en el paso anterior.
 
     [<img src="images/semui-run-task.png" height="400"/>](images/semui-run-task.png)
 
@@ -300,16 +334,6 @@ terraform apply -auto-approve
 
 Como se aclaró antes, para que la IP pública se copie bien en el inventory, se debe volver a correr el `terraform apply --auto-approve`.
 
-### Git Push
-
-Para poder tener el repositorio actualizado con las llaves privadas y el inventory creado, se debe correr desde el directorio root:
-
-```shell
-git push
-```
-
-Esto permitirá que al clonar el repo dentro de la VM Pública, esten disponibles todos los archivos necesarios.
-
 ### Configurar VM Pública
 
 Para configurar la VM pública donde van a estar el Load Balancer (expuesto en el puerto 8080) y Semaphore (en el puerto 3000), se debe ejecutar en el directorio root el playbook `public-config.yml` de la siguiente manera:
@@ -322,7 +346,7 @@ Con este playbook, van a quedar configurados los requerimientos para poder corre
 
 ### Configurar Webserver and Database VMs
 
-Para poder configurar las VMs donde va a estar corriendo el webserver y la base de datos, se debe acceder a la VM pública por SSH con el siguiente comando desde el directorio root:
+Para poder configurar las VMs donde van a estar corriendo el webserver y la base de datos, se debe acceder a la VM pública por SSH con el siguiente comando desde el directorio root:
 
 ```shell
 ssh -i keys/private.pem azureuser@[public_ip]
@@ -332,13 +356,13 @@ Una vez dentro solamente hay que correr:
 
 ```shell
 cd tpe-redes
-sudo ansible-playbook [-vvvv] --private-key=./keys/ws_private.pem -i inventory/inventory.ini playbooks/ws-config.yml
 sudo ansible-playbook [-vvvv] --private-key=./keys/db_private.pem -i inventory/inventory.ini playbooks/db-config.yml
+sudo ansible-playbook [-vvvv] --private-key=./keys/ws_private.pem -i inventory/inventory.ini playbooks/ws-config.yml
 ```
 
-> Obs: La ejecución del playbook es bastante larga.
+> Aclaración: Los playbooks tambien pueden correrse desde Semaphore con los pasos de la [sección anterior](#semaphore-ui).
 
-> Nota: Se recomienda intentar acceder a los hosts remotos de los grupos _ws_ y _db_ antes de correr los playbooks para que no aparezca el mensaje interactivo _"The authenticity of host '10.0.0.* (10.0.0.*)' can't be established."_, lo que resulta en una incomodidad a la hora de correr el playbook.  También se podrían agregar las IPs al archivo `authorized_hosts`.
+> Nota: Se recomienda intentar acceder a los hosts remotos de los grupos _ws_ y _db_ antes de correr los playbooks para que no aparezca el mensaje interactivo _"The authenticity of host '10.0.0.* (10.0.0.*)' can't be established."_, lo que resulta en una incomodidad a la hora de correr el playbook.  También se podrían agregar las IPs al archivo `known_hosts` con sus respectivas llaves.
 
 ### Destruir la Infrastructura
 Para destruir la infrastructura, se deben ejecutar los siguientes comandos:
