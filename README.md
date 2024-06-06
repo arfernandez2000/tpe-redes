@@ -188,31 +188,31 @@ Las variables dentro de las dobles llaves `{{ }}` son placeholders que Jinja2 re
 
 `{{ ip_ws_2 }}`: Dirección IP del segundo servidor backend.
 
-`{{ port_ws }}`: Puerto donde se disponibilizaran ambos servidores backend.
+`{{ port_ws }}`: Puerto donde se disponibilizarán ambos servidores backend.
 
 `{{ lb_port }}`: Puerto en el que el nginx escuchará las solicitudes.
 
 ### pg_hba.conf
 
-`{{ item.type }}`: 
+`{{ item.type }}`: El tipo de conexión, `local` o `host`.
 
-`{{ item.database }}`: 
+`{{ item.database }}`: La base de datos afectada.
 
-`{{ item.user }}`: 
+`{{ item.user }}`: El usuario al que se aplica la regla, `all` para todos.
 
-`{{ item.address }}`: 
+`{{ item.address }}`: La dirección IP o rango desde donde se permite la conexión. Cuando el tipo de conexión es `local`, no se especifica ninguna dirección ya que se refiere a conexiones locales.
 
-`{{ item.method }}`: 
+`{{ item.method }}`: El método de autenticación utilizado, como `trust` o `md5`. `trust` significa que se permite la conexión sin autenticación y `md5` indica que se utilizará autenticación basada en Message Digest Algorithm 5.
 
 ### postgresql.conf
 
-`{{ postgresql_data_directory }}`: Se reemplazará por el valor del directorio de datos de PostgreSQL.
+`{{ postgresql_data_directory }}`: El path al directorio de datos de PostgreSQL.
 
-`{{ postgresql_listen_addresses }}`: Se reemplazará por las direcciones IP en las que PostgreSQL debe escuchar.
+`{{ postgresql_listen_addresses }}`: Las direcciones IP en las que PostgreSQL debe escuchar.
 
-`{{ postgresql_max_connections }}`: Se reemplazará por el número máximo de conexiones permitidas.
+`{{ postgresql_max_connections }}`: El número máximo de conexiones permitidas.
 
-`{{ postgresql_shared_buffers }}`: Se reemplazará por el valor de los buffers compartidos.
+`{{ postgresql_shared_buffers }}`: El valor de los buffers compartidos.
 
 ### Playbooks
 En todos los playbooks, se deberá especificar:
