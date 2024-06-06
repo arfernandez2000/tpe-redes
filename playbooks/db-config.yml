@@ -21,7 +21,7 @@
       - { type: 'host', database: 'all', user: 'all', address: '127.0.0.1/32', method: 'md5' }
       - { type: 'host', database: 'all', user: 'all', address: '::1/128', method: 'md5' }
       - { type: 'host', database: 'all', user: 'all', address: '0.0.0.0/0', method: 'md5' }
-      
+
   tasks:
     - name: Add pgdg repo to sources.list.d
       ansible.builtin.lineinfile:
@@ -33,14 +33,14 @@
       ansible.builtin.apt_key:
         url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
         state: present
-    
-    - name: apt-get update
+
+    - name: Do an apt-get update
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
 
     - name: Install PostgreSQL and PostgreSQL Client
       ansible.builtin.apt:
-        name: 
+        name:
           - postgresql
           - postgresql-client
         state: present
@@ -51,7 +51,7 @@
       register: postgres_version_output
 
     - name: Set version number as fact
-      set_fact:
+      ansible.builtin.set_fact:
         postgresql_version: "{{ postgres_version_output.stdout }}"
 
     - name: Install python, psycopg2 and acl
@@ -78,6 +78,7 @@
         mode: '0700'
 
     - name: Initialize PostgreSQL data directory
+      become: true
       become_user: postgres
       ansible.builtin.command: "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -D {{ postgresql_data_directory }}"
       args:
@@ -103,10 +104,10 @@
       notify: Reload PostgreSQL
 
     - name: Allow replication connections in pg_hba.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ postgresql_conf_directory }}/pg_hba.conf"
         line: "host replication {{ replication_user }} {{ groups['db'][1] }}/32 md5"
-        create: yes
+        create: true
       register: pg_hba_changed
       changed_when: true  # Esto asegura que la tarea se marque como cambiada incluso si no produce cambios en el sistema
       when: primary is defined and primary
@@ -139,7 +140,8 @@
         password: "{{ postgresql_password }}"
       when: primary is defined and primary
 
-    - name: GRANT ALL PRIVILEGES ON SCHEMA public to user 
+    - name: GRANT ALL PRIVILEGES ON SCHEMA public to user
+      become: true
       become_user: postgres
       community.postgresql.postgresql_privs:
         db: "{{ postgresql_database }}"
@@ -150,6 +152,7 @@
       when: primary is defined and primary
 
     - name: Allow user myuser to do all actions in database mydatabase
+      become: true
       become_user: postgres
       community.postgresql.postgresql_privs:
         db: "{{ postgresql_database }}"
@@ -177,6 +180,7 @@
         state: enabled
 
     - name: Create replication user
+      become: true
       become_user: postgres
       community.postgresql.postgresql_user:
         name: "{{ replication_user }}"
@@ -196,7 +200,7 @@
       when: primary is defined and primary
 
     - name: Add replication configuration to postgresql.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ postgresql_conf_directory }}/postgresql.conf"
         regexp: "^#?wal_level = "
         line: "wal_level = logical"
@@ -204,7 +208,7 @@
       when: primary is defined and primary
 
     - name: Add replication configuration to postgresql.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ postgresql_conf_directory }}/postgresql.conf"
         regexp: "^#?max_wal_senders = "
         line: "max_wal_senders = 3"
@@ -212,7 +216,7 @@
       when: primary is defined and primary
 
     - name: Add replication configuration to postgresql.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ postgresql_conf_directory }}/postgresql.conf"
         regexp: "^#?wal_log_hints = "
         line: "wal_log_hints = on"
@@ -244,7 +248,7 @@
     - name: Create PostgreSQL data directory on replica
       ansible.builtin.file:
         path: "{{ postgresql_data_directory }}"
-        recurse: yes
+        recurse: true
         owner: postgres
         group: postgres
         mode: '0700'

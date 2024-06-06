@@ -4,9 +4,9 @@
   become: true
   remote_user: azureuser
   tasks:
-    - name: apt-get update
+    - name: Do an apt-get update
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
 
     - name: Install required system packages
       ansible.builtin.apt:
@@ -22,7 +22,7 @@
         dest: ./
       notify: Restart node-app
 
-    - name: npm install
+    - name: Do an npm install
       ansible.builtin.command:
       become: true
       args:
@@ -58,14 +58,9 @@
     - name: Enable and start Node.js app service
       ansible.builtin.systemd:
         name: node-app
-        enabled: yes
+        enabled: true
         state: started
 
-    # - name: Restart Nginx in localhost
-    #   ansible.builtin.service:
-    #       name: nginx
-    #       state: restarted
-    #   delegate_to: localhost
 
   handlers:
     - name: Restart node-app

@@ -1,6 +1,6 @@
 - name: Configure Public VM with Load Balancer, Semaphore and Ansible
   hosts: public
-  become: yes
+  become: true
   remote_user: azureuser
 
   vars:
@@ -20,12 +20,13 @@
         state: present
 
     - name: Get user if exists
-      command: semaphore user get --login {{ semaphore_admin_user }}
+      ansible.builtin.command: semaphore user get --login {{ semaphore_admin_user }}
       ignore_errors: true
       register: user
 
-    - name: Create admin user 
-      command: semaphore user add --admin --login {{ semaphore_admin_user }} --name={{ semaphore_admin_user }} --email={{ semaphore_admin_email }} --password={{ semaphore_admin_password }}
+    - name: Create admin user
+      ansible.builtin.command: |
+        semaphore user add --admin --login {{ semaphore_admin_user }} --name={{ semaphore_admin_user }} --email={{ semaphore_admin_email }} --password={{ semaphore_admin_password }}
       when: user.stderr != ""
 
     - name: Check status of Semaphore service with Snap
@@ -36,14 +37,14 @@
       ansible.builtin.apt:
         name: nginx
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Ensure NGINX is started and enabled
       ansible.builtin.systemd:
         name: nginx
         state: started
-        enabled: yes
-    
+        enabled: true
+
     - name: Deploy nginx.conf from template
       ansible.builtin.template:
         src: ../templates/nginx.conf.j2
@@ -71,23 +72,34 @@
     - name: Install ansible python package
       ansible.builtin.pip:
         name: "{{ item }}"
-      loop: 
+      loop:
         - ansible
         - ansible-core
 
     - name: Download collection from Ansible Galaxy
-      command: ansible-galaxy -vvv collection install community.general
+      ansible.builtin.command: ansible-galaxy -vvv collection install community.general
 
-    - name: Copy code into vm
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: ./tpe-redes
+        state: directory
+
+    - name: Copy found files into vm
       ansible.builtin.copy:
-        src: ../../tpe-redes
-        dest: ./
+        src: "../{{ item }}"
+        dest: "./tpe-redes"
+      loop:
+        - templates
+        - web-server
+        - keys
+        - inventory
+        - playbooks
 
     - name: Change file ownership, group and permissions
       ansible.builtin.file:
         path: "./tpe-redes/keys/{{ item }}"
         mode: '0400'
       loop:
-       - private.pem
-       - db_private.pem
-       - ws_private.pem
+        - private.pem
+        - db_private.pem
+        - ws_private.pem
